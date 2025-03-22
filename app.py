@@ -1,123 +1,117 @@
-
 import streamlit as st
-from io import StringIO
+import os
+import base64
 from dotenv import load_dotenv
 import google.generativeai as genai
-import os
+import pandas as pd
 
+# Page config
+st.set_page_config(page_title="Chatbot", layout="wide")
 
-st.set_page_config(page_title='Gemini Chemistry Chatbot', 
-                    page_icon = "images/gemini_avatar.png",
-                    initial_sidebar_state = 'auto')
+# Styling and headers
+st.markdown("""
+    <style>
+        .main { background-color: #1d1e2c; color: #e0e0e0; }
+        .css-18e3th9 { background-color: #1d1e2c; }
+        .css-1d391kg { color: #e0e0e0; }
+        .block-container { padding-top: 2rem; }
+    </style>
+    <h2 style='text-align: center; color: #B388EB;'>Chatbot</h2>
+""", unsafe_allow_html=True)
 
+# Sidebar
+with st.sidebar:
+    st.image("images/gemini_avatar.png", width=150)
+    st.markdown("### Operation Tools")
+    st.checkbox("Activate Operation Agent", value=True)
+    if st.button("Clear History"):
+        st.session_state.clear()
+    uploaded_files = st.file_uploader(
+        "Choose one or multiple data files",
+        type=["pdf", "msg", "png"],
+        accept_multiple_files=True
+    )
 
-@st.cache_data
+# Initialize Gemini model
+@st.cache_resource
 def initialize_model():
-    """
-    Configure the Google generativeai with the GEMINI_API_KEY
-    """
     load_dotenv()
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-    os.environ["GEMINI_API_KEY"] = GEMINI_API_KEY
-    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
     model = genai.GenerativeModel("gemini-1.5-flash")
     system_prompt = """
-        #INSTRUNCTIONS
-        You are a helpful assistant specialized in reading contracts. 
-        you're task is to find anomalies in employment contracts.
-        as as an example if the salary is low, or the work hours are too long 
-    
-        #OUTPUT
-         - a short summary of the anomalies finded in the contract 
-         - a list of anomalies as a bullet list with attached the line number where the anomaly was found: 
+        You are a helpful assistant specialized in banking document verification.
+        Analyze the uploaded PDF files and extract relevant anomalies or issues.
+        Provide a short summary, and a bullet list with line numbers.
     """
-    chat = model.start_chat(
-            history=[{
-                        "role": "user",
-                        "parts": [system_prompt]
-                    }]
-            )
-    return chat
+    return model.start_chat(history=[{"role": "user", "parts": [system_prompt]}])
 
+# PDF display function
+def display_pdf(uploaded_file):
+    """
+    Displays PDF within the UI page.
+    """
+    base64_pdf = base64.b64encode(uploaded_file.getvalue()).decode("utf-8")
+    pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" width="680" height="958" type="application/pdf">'
+    st.markdown(pdf_display, unsafe_allow_html=True)
 
+# Load model in session
 if "chat" not in st.session_state:
     st.session_state.chat = initialize_model()
 
+# Metadata table
+case_data = []
+for f in uploaded_files:
+    case_data.append({
+        "Case": f.name,
+        "Type": f.type,
+        "Client Name": "Amanda Johnson",
+        "Client Importance": 5,
+        "Urgency": 3,
+        "Priority": 4
+    })
 
-background_color = "#252740"
+if case_data:
+    df = pd.DataFrame(case_data)
+    st.markdown("### Uploaded Cases")
+    st.dataframe(df, use_container_width=True)
 
+# File preview and download
+if uploaded_files:
+    file_names = [f.name for f in uploaded_files]
+    selected_file_name = st.selectbox("Choose a case to view", options=file_names)
+    selected_file = next(f for f in uploaded_files if f.name == selected_file_name)
+
+    st.download_button("Download PDF", selected_file.getvalue(), file_name=selected_file.name)
+    st.markdown("### Preview Document")
+    display_pdf(selected_file)
+
+# Chat interface
 avatars = {
-    "assistant" : "images/gemini_avatar.png",
+    "assistant": "images/gemini_avatar.png",
     "user": "images/user_avatar.png"
 }
 
-st.markdown("<h2 style='text-align: center; color: #3184a0;'>Gemini Chemistry Chatbot</h2>", unsafe_allow_html=True)
-st.markdown("<h4 style='text-align: center; color: #3184a0;'>Enter the SMILES Code to return the IUPAC name and the name of the compound</h4>", unsafe_allow_html=True)
+if "messages" not in st.session_state:
+    st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
 
-with st.sidebar:
-    st.image("images/gemini_avatar.png")
-
-if "messages" not in st.session_state.keys():
-    st.session_state.messages = [
-        {"role": "assistant", "content": "How may I assist you today?"}
-    ]
-
-for message in st.session_state.messages:
-    with st.chat_message(message["role"], 
-                         avatar=avatars[message["role"]]):
-        st.write(message["content"])
-
-
-def clear_chat_history():
-    st.session_state.messages = [
-        {"role": "assistant", "content": "How may I assist you today?"}
-    ]
-    
-st.sidebar.button("Clear Chat History", on_click=clear_chat_history)
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"], avatar=avatars.get(msg["role"], None)):
+        st.write(msg["content"])
 
 def run_query(input_text):
-    """
-    Run query. The model is initialized and then queried.
-    Args:
-        input_text (str): we are just passing to the model the user prompt
-    Returns:
-        response.text (str): the text of the response
-    """
     try:
-        
         response = st.session_state.chat.send_message(input_text)
-
-        if response:
-            return response.text
-        
-        else:
-            return "Error"
-
-    except Exception as ex:
+        return response.text if response else "Error"
+    except Exception:
         return "Error"
-    
 
-output = st.empty()
-if prompt := st.chat_input():
+if prompt := st.chat_input("Enter your message here..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user", avatar=avatars["user"]):
         st.write(prompt)
 
-if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant", avatar=avatars["assistant"]):
         with st.spinner("Thinking..."):
-            
-
             response = run_query(prompt)
-
-            placeholder = st.empty()
-            full_response = ""
-            for item in response:
-                full_response += item
-                placeholder.markdown(full_response, unsafe_allow_html=True)
-            placeholder.markdown(response, unsafe_allow_html=True)
-
-    message = {"role": "assistant", 
-               "content": response,
-               "avatar": avatars["assistant"]}
-    st.session_state.messages.append(message)
+            st.write(response)
+    st.session_state.messages.append({"role": "assistant", "content": response})
