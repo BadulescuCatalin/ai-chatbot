@@ -6,7 +6,7 @@ import google.generativeai as genai
 import os
 import base64
 
-st.set_page_config(page_title='Gemini Contract Chatbot', 
+st.set_page_config(page_title='FraudSniff', 
                     page_icon = "images/gemini_avatar.png",
                     initial_sidebar_state = 'auto')
 
@@ -48,7 +48,7 @@ if "chat" not in st.session_state:
 background_color = "#252740"
 
 avatars = {
-    "assistant" : "images/gemini_avatar.png",
+    "assistant" : "images/logo.png",
     "user": "images/user_avatar.png"
 }
 
@@ -65,15 +65,40 @@ def display_pdf(uploaded_file):
 
 
 with st.sidebar:
-    st.image("images/gemini_avatar.png")
+    st.image("images/logo.png",  width=200)
 
+    # Document type dropdown
+    st.markdown("---")
     st.markdown("### 📑 Document Type")
-    is_contract = st.checkbox("Contracts")
-    is_terms = st.checkbox("Terms and Conditions")
+    doc_type = st.selectbox(
+    "Choose the type of document",
+    ["Select...", "Contract", "Terms and Conditions"])
     
-    uploaded_file = st.file_uploader("Upload a PDF file", type=["pdf"])
+    # File upload
+    st.markdown("---")
+    st.markdown("### 📤 Upload PDF")
+    uploaded_file = st.file_uploader("Choose a file", type=["pdf"])
     # if uploaded_file is not None:
     #     display_pdf(uploaded_file)
+
+    # Show extra checkboxes based on selected document type
+    if doc_type == "Contract":
+        st.markdown("---")
+        st.markdown("### ✍️ Contract Checks")
+        check_fees = st.checkbox("🔍 Check for hidden fees")
+        check_unfair = st.checkbox("⛔ Detect unfair clauses")
+        check_autorenew = st.checkbox("🔁 Identify auto-renewal traps")
+
+    elif doc_type == "Terms and Conditions":
+        st.markdown("---")
+        st.markdown("### 📋 T&C Checks")
+        check_data_sharing = st.checkbox("🕵️ Track data sharing practices")
+        check_user_lockin = st.checkbox("⛓️ Look for user-lock-in policies")
+        check_vague_terms = st.checkbox("⚠️ Highlight vague responsibilities")
+        
+    # Big scan button
+    st.markdown("<br>", unsafe_allow_html=True)
+    scan_clicked = st.button("🚀 Scan My Document", use_container_width=True)
     
 if "messages" not in st.session_state.keys():
     st.session_state.messages = [
