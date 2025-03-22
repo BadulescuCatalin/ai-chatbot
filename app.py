@@ -23,14 +23,13 @@ def initialize_model():
     model = genai.GenerativeModel("gemini-1.5-flash")
     system_prompt = """
         #INSTRUNCTIONS
-        You are a helpful assistant specialized in computational chemistry. 
-        If a SMILES string is given, respond with the common and IUPAC name of the compound.
-
+        You are a helpful assistant specialized in reading contracts. 
+        you're task is to find anomalies in employment contracts.
+        as as an example if the salary is low, or the work hours are too long 
+    
         #OUTPUT
-        Format allways the outpus as a JSON, with the following fields:
-        - SMILES string
-        - Name of the compound
-        - IUPAC Name
+         - a short summary of the anomalies finded in the contract 
+         - a list of anomalies as a bullet list with attached the line number where the anomaly was found: 
     """
     chat = model.start_chat(
             history=[{
