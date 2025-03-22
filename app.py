@@ -66,6 +66,11 @@ def display_pdf(uploaded_file):
 
 with st.sidebar:
     st.image("images/gemini_avatar.png")
+
+    st.markdown("### 📑 Document Type")
+    is_contract = st.checkbox("Contracts")
+    is_terms = st.checkbox("Terms and Conditions")
+    
     uploaded_file = st.file_uploader("Upload a PDF file", type=["pdf"])
     # if uploaded_file is not None:
     #     display_pdf(uploaded_file)
