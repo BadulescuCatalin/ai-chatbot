@@ -4,9 +4,9 @@ from io import StringIO
 from dotenv import load_dotenv
 import google.generativeai as genai
 import os
+import base64
 
-
-st.set_page_config(page_title='Gemini Chemistry Chatbot', 
+st.set_page_config(page_title='Gemini Contract Chatbot', 
                     page_icon = "images/gemini_avatar.png",
                     initial_sidebar_state = 'auto')
 
@@ -52,12 +52,24 @@ avatars = {
     "user": "images/user_avatar.png"
 }
 
-st.markdown("<h2 style='text-align: center; color: #3184a0;'>Gemini Chemistry Chatbot</h2>", unsafe_allow_html=True)
-st.markdown("<h4 style='text-align: center; color: #3184a0;'>Enter the SMILES Code to return the IUPAC name and the name of the compound</h4>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center; color: #3184a0;'>Document Fraud Detection Chatbot</h2>", unsafe_allow_html=True)
+# st.markdown("<h4 style='text-align: center; color: #3184a0;'>Enter the SMILES Code to return the IUPAC name and the name of the compound</h4>", unsafe_allow_html=True)
+
+def display_pdf(uploaded_file):
+    """
+    Displays PDF within the UI page.
+    """
+    base64_pdf = base64.b64encode(uploaded_file.getvalue()).decode("utf-8")
+    pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" width="680" height="958" type="application/pdf">'
+    st.markdown(pdf_display, unsafe_allow_html=True)
+
 
 with st.sidebar:
     st.image("images/gemini_avatar.png")
-
+    uploaded_file = st.file_uploader("Upload a PDF file", type=["pdf"])
+    # if uploaded_file is not None:
+    #     display_pdf(uploaded_file)
+    
 if "messages" not in st.session_state.keys():
     st.session_state.messages = [
         {"role": "assistant", "content": "How may I assist you today?"}
@@ -68,6 +80,9 @@ for message in st.session_state.messages:
                          avatar=avatars[message["role"]]):
         st.write(message["content"])
 
+if uploaded_file is not None:
+    st.markdown("<h4 style='color: #3184a0;'>Document Preview</h4>", unsafe_allow_html=True)
+    display_pdf(uploaded_file)
 
 def clear_chat_history():
     st.session_state.messages = [
