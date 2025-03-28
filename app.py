@@ -1,10 +1,12 @@
 
 import streamlit as st
+from qdrant_api import insert_text_chunks, query_similar_texts
 from io import StringIO
 from dotenv import load_dotenv
 import google.generativeai as genai
 import os
 import base64
+from chunking import semantic_chunking, read_pdf_text
 
 st.set_page_config(page_title='FraudSniff', 
                     page_icon = "images/gemini_avatar.png",
@@ -78,6 +80,22 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### 📤 Upload PDF")
     uploaded_file = st.file_uploader("Choose a file", type=["pdf"])
+    
+    # === Extract text from PDF ===
+    text = read_pdf_text(uploaded_file)
+
+    # === Chunk the text ===
+    chunks = semantic_chunking(text)
+    doc_id = "doc1"
+    inserted = insert_text_chunks(doc_id, chunks)
+    results = query_similar_texts("Duties", threshold=0.2)
+    print(f"Results {results} chunks.")
+    print(f"Inserted {inserted} chunks.")
+    st.write(results)
+    # # === Print the chunks ===
+    # print("\n--- Chunks ---\n")
+    for i, chunk in enumerate(chunks):
+        print(f"Chunk {i + 1}:\n{chunk}\n{'-' * 40}")
     # if uploaded_file is not None:
     #     display_pdf(uploaded_file)
 
